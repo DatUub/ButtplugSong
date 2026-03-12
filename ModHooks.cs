@@ -202,11 +202,16 @@ internal static class ModHooks
 
         static IEnumerable<MethodBase> TargetMethods()
         {
+            var log = BepInEx.Logging.Logger.CreateLogSource("ButtplugSong.Hooks");
             var methods = new List<MethodBase>();
 
             var baseGet = typeof(SavedItem).GetMethod(nameof(SavedItem.Get), new[] { typeof(int), typeof(bool) });
             if (baseGet != null && !baseGet.IsAbstract)
                 methods.Add(baseGet);
+
+            var baseGetSimple = typeof(SavedItem).GetMethod(nameof(SavedItem.Get), new[] { typeof(bool) });
+            if (baseGetSimple != null && !baseGetSimple.IsAbstract)
+                methods.Add(baseGetSimple);
 
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
@@ -227,6 +232,10 @@ internal static class ModHooks
                     }
                 }
             }
+
+            foreach (var m in methods)
+                log.LogInfo($"SavedItemGetPatch target: {m.DeclaringType.Name}.{m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})");
+
             return methods;
         }
 
