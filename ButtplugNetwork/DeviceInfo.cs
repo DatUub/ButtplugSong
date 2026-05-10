@@ -113,18 +113,21 @@ public class DeviceInfo
             if (!Features.TryGetValue(featureType, out DeviceFeature feature)) continue;
             if (!feature.IsSupported || !feature.IsEnabled) continue;
 
+            // Addon hook: lets subscribers transform per-feature power before send.
+            float p = PlugManager.RaiseDevicePowerComputing(Device.Name, feature.Type, power);
+
             switch (feature.Type)
             {
                 case FeatureType.Vibrate:
-                    Device.SendVibrateCmd(power);
+                    Device.SendVibrateCmd(p);
                     break;
                 case FeatureType.Rotate:
                     if (AlternateRotation) RotateClockwise = !RotateClockwise;
-                    Device.SendRotateCmd(power, RotateClockwise);
+                    Device.SendRotateCmd(p, RotateClockwise);
                     break;
                 case FeatureType.Position:
                     uint durationMs = (uint)(MoveDuration * 1000f);
-                    Device.SendLinearCmd(durationMs, power);
+                    Device.SendLinearCmd(durationMs, p);
                     break;
                     //other features not implemented yet - see DeviceFeature.Implemented
             }

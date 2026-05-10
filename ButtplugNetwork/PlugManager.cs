@@ -36,6 +36,28 @@ public class PlugManager
     public static event Action? DisconnectedFromServer;
     public static event Action<float, bool>? UpdateDevicePower;
 
+    /// <summary>
+    /// Fires for each per-feature power dispatch on each connected device. Subscribers receive
+    /// the device name, feature type, and the original computed power, and return the (possibly
+    /// transformed) power that will actually be sent. Subscribers are chained: each one's output
+    /// feeds the next. Exceptions are caught and skip that subscriber. Lets addons remap, scale,
+    /// or zero the per-feature output without forking the dispatch path.
+    /// </summary>
+    public static event Func<string, FeatureType, float, float>? DevicePowerComputing;
+
+    internal static float RaiseDevicePowerComputing(string device, FeatureType feature, float originalPower)
+    {
+        if (DevicePowerComputing == null) return originalPower;
+        var log = BepInEx.Logging.Logger.CreateLogSource("ButtplugSong.Hooks");
+        float current = originalPower;
+        foreach (Func<string, FeatureType, float, float> handler in DevicePowerComputing.GetInvocationList())
+        {
+            try { current = handler(device, feature, current); }
+            catch (Exception ex) { log.LogWarning($"DevicePowerComputing subscriber threw: {ex.Message}"); }
+        }
+        return current;
+    }
+
     public ButtplugRawClient Client { get; private set; }
 
     public string ServerAddress { get; private set; }
