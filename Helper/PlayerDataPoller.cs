@@ -204,18 +204,25 @@ internal class PlayerDataPoller : MonoBehaviour
         _log.LogInfo("Snapshot reset.");
     }
 
-    /// <summary>
-    /// Gets a value from PlayerData by trying field first, then property.
-    /// PlayerDataAccess uses C# properties, not raw fields.
-    /// </summary>
+    // Resolved-once-then-cached MemberInfo per field name. Each entry is either
+    // FieldInfo, PropertyInfo, or null sentinel meaning "no such member, do not look again."
+    // Bounds the per-poll reflection to a single dictionary lookup after warmup.
+    private static readonly Dictionary<string, MemberInfo?> _memberCache = new();
+    private static readonly object _missingSentinel = new();
+
     private static object? GetMemberValue(Type type, object instance, string name)
     {
-        var field = type.GetField(name, BindingFlags.Instance | BindingFlags.Public);
-        if (field != null) return field.GetValue(instance);
-
-        var prop = type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
-        if (prop != null) return prop.GetValue(instance);
-
-        return null;
+        if (!_memberCache.TryGetValue(name, out var member))
+        {
+            member = (MemberInfo?)type.GetField(name, BindingFlags.Instance | BindingFlags.Public)
+                  ?? (MemberInfo?)type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            _memberCache[name] = member;
+        }
+        return member switch
+        {
+            FieldInfo f => f.GetValue(instance),
+            PropertyInfo p => p.GetValue(instance),
+            _ => null,
+        };
     }
 }
