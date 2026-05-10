@@ -32,6 +32,15 @@ public class VibeManager
     /// </summary>
     public static event Func<VibeActivation, bool>? SourceActivating;
 
+    /// <summary>
+    /// Public addon entry point to fire a source activation as if a VibeSource had called it.
+    /// Routes through the same VibeLogic.VibeSourceActivation path that built-in sources use,
+    /// so the SourceActivating hook still fires and any subscribers can rewrite or swallow.
+    /// Useful for addon test buttons and synthetic event injection.
+    /// </summary>
+    public static void FireSource(string identifier, float power, string powerMode = "+", float time = 1f, string timeMode = "+", float punctuateTime = 0f)
+        => Instance.Logic.VibeSourceActivation(identifier, power, powerMode, time, timeMode, punctuateTime);
+
     internal static bool RaiseSourceActivating(in VibeActivation a)
     {
         if (SourceActivating == null) return true;

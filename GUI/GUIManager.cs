@@ -27,6 +27,19 @@ internal class GUIManager : MonoBehaviour
         private set => _instance = value;
     }
 
+    internal void RegisterTab(string label, VisualElement content)
+    {
+        if (MainTabView == null)
+        {
+            BepInEx.Logging.Logger.CreateLogSource("ButtplugSong.Hooks")
+                .LogWarning($"RegisterTab('{label}') called before MainTabView is ready; tab dropped.");
+            return;
+        }
+        var tab = new Tab(label);
+        if (content != null) tab.Add(content);
+        MainTabView.Add(tab);
+    }
+
     public GameObject GUI_GameObject;
     public UIDocument UIDoc;
     public VisualElement Root;
