@@ -41,6 +41,9 @@ internal class PlayerDataPoller : MonoBehaviour
         _trackedBools.Add(fieldName);
     }
 
+    // Most PD int writes now route through Harmony patches on SetInt/IncrementInt/IntAdd/DecrementInt.
+    // The int list here is the residue: fields written by direct field assignment in compiled game
+    // code that bypasses every typed setter. The dedup guard in BuzzOnPickups handles overlap.
     public void TrackInt(string fieldName)
     {
         _trackedInts.Add(fieldName);

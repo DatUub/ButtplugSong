@@ -103,6 +103,36 @@ internal static class ModHooks
         OnSetIntHook?.Invoke(intName, value);
     }
 
+    // IncrementInt/IntAdd/DecrementInt write the field directly via reflection without calling SetInt.
+    // PlayMaker's IncrementPlayerDataInt + PlayerDataIntAdd actions route through these, so
+    // hooking them here catches FSM-driven counter writes (mask shards, spool fragments, silk skills, etc).
+    [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.IncrementInt))]
+    [HarmonyPostfix]
+    private static void OnIncrementInt(PlayerData __instance, string intName)
+    {
+        int v = __instance.GetInt(intName);
+        _setVarLog.LogDebug($"PD.IncrementInt: {intName} -> {v}");
+        OnSetIntHook?.Invoke(intName, v);
+    }
+
+    [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.IntAdd))]
+    [HarmonyPostfix]
+    private static void OnIntAdd(PlayerData __instance, string intName)
+    {
+        int v = __instance.GetInt(intName);
+        _setVarLog.LogDebug($"PD.IntAdd: {intName} -> {v}");
+        OnSetIntHook?.Invoke(intName, v);
+    }
+
+    [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.DecrementInt))]
+    [HarmonyPostfix]
+    private static void OnDecrementInt(PlayerData __instance, string intName)
+    {
+        int v = __instance.GetInt(intName);
+        _setVarLog.LogDebug($"PD.DecrementInt: {intName} -> {v}");
+        OnSetIntHook?.Invoke(intName, v);
+    }
+
     // Called by PlayerDataPoller to fire the same events for fields written directly (bypass SetBool/SetInt)
     internal static void RaiseSetBool(string name, bool value) => OnSetBoolHook?.Invoke(name, value);
     internal static void RaiseSetInt(string name, int value) => OnSetIntHook?.Invoke(name, value);
