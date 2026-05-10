@@ -25,6 +25,7 @@ namespace ButtplugSong
 
             harmony.PatchAll();
             ModHooks.ApplySetVariablePatch(harmony);
+            PlayerDataPoller.EnsureExists();
 
             Logger.LogInfo($"Plugin {Name} ({Id}) has loaded!");
         }

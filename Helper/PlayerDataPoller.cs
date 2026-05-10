@@ -22,6 +22,7 @@ internal class PlayerDataPoller : MonoBehaviour
     private readonly HashSet<string> _trackedInts = new();
     private readonly HashSet<string> _trackedCollectables = new();
     private readonly Dictionary<string, int> _collectableSnapshot = new();
+    private object? _lastPdRef;
 
     private const float PollIntervalSeconds = 0.5f;
 
@@ -71,6 +72,14 @@ internal class PlayerDataPoller : MonoBehaviour
             if (!PlayerData.HasInstance) continue;
             var pd = PlayerData.instance;
             var pdType = pd.GetType();
+
+            // New save loaded: PD instance flipped, drop stale baselines.
+            if (!ReferenceEquals(pd, _lastPdRef))
+            {
+                _snapshot.Clear();
+                _collectableSnapshot.Clear();
+                _lastPdRef = pd;
+            }
 
             foreach (var fieldName in _trackedBools)
             {

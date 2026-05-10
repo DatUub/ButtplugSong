@@ -90,7 +90,7 @@ internal static class ModHooks
     [HarmonyPostfix]
     private static void OnSetBool(string boolName, bool value)
     {
-        if (value) _setVarLog.LogInfo($"[DIAG] PD.SetBool: {boolName} = {value}");
+        if (value) _setVarLog.LogDebug($"PD.SetBool: {boolName} = {value}");
         OnSetBoolHook?.Invoke(boolName, value);
     }
 
@@ -99,7 +99,7 @@ internal static class ModHooks
     [HarmonyPostfix]
     private static void OnSetInt(string intName, int value)
     {
-        _setVarLog.LogInfo($"[DIAG] PD.SetInt: {intName} = {value}");
+        _setVarLog.LogDebug($"PD.SetInt: {intName} = {value}");
         OnSetIntHook?.Invoke(intName, value);
     }
 
@@ -252,9 +252,6 @@ internal static class ModHooks
             // Deduplicate (same method from base class could be added twice)
             methods = methods.Distinct().ToList();
 
-            foreach (var m in methods)
-                log.LogInfo($"SavedItemGetPatch target: {m.DeclaringType.Name}.{m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})");
-
             return methods;
         }
 
@@ -319,7 +316,7 @@ internal static class ModHooks
     {
         if (__0 is PlayerData)
         {
-            _setVarLog.LogInfo($"PD.SetVariable: {__1} = {__2}");
+            _setVarLog.LogDebug($"PD.SetVariable: {__1} = {__2}");
             OnPlayerDataSetVariableHook?.Invoke(__1, __2);
         }
     }

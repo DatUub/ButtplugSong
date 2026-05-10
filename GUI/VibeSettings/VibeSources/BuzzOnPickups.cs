@@ -151,7 +151,6 @@ internal class BuzzOnPickups : VibeSourceWithPunctuate
             "Magnetite Dice", "Scuttlebrace", "Bone Necklace", "Shell Satchel",
             "Sprintmaster", "Musician Charm", "Thief Charm", "Weighted Anklet");
 
-        //Need to be fixed
         KnownItems["ToolPouchUpgrades"] = CreateUI("ToolPouch", 0.5f, true);
         KnownItems["Tool Pouch&Kit Inv"] = KnownItems["ToolPouchUpgrades"];
         KnownItems["ToolKitUpgrades"] = CreateUI("CraftingKit", 0.5f, true, true);
@@ -162,7 +161,6 @@ internal class BuzzOnPickups : VibeSourceWithPunctuate
         KnownItems["fullHeart"] = CreateUI("FullMask", 1f, true);
         KnownItems["silkSpoolParts"] = CreateUI("SpoolFragment", 0.4f, true);
         KnownItems["fullSpool"] = CreateUI("FullSpool", 0.6f, true, true);
-        // end of to be fixed
         #endregion
 
         #region Navigation / World
