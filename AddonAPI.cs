@@ -74,6 +74,36 @@ public static class AddonAPI
     }
 
     /// <summary>
+    /// Returns the names of currently-connected devices that the mod has discovered through
+    /// Buttplug.io. Use this to build per-device routing UIs without reflecting into
+    /// VibeManager.plug. Returns an empty sequence if VibeManager has not finished initializing
+    /// or no devices are connected yet.
+    /// </summary>
+    public static IEnumerable<string> GetDeviceNames()
+    {
+        PlugManager manager;
+        try { manager = VibeManager.Instance?.plug; }
+        catch { return Enumerable.Empty<string>(); }
+        if (manager == null) return Enumerable.Empty<string>();
+        return manager.GetDevices().Select(d => d.Name).ToArray();
+    }
+
+    /// <summary>
+    /// Returns the connected ButtplugDevice instances directly. Prefer GetDeviceNames for UI
+    /// listings; reach for this only when you need to send commands to a device (e.g.
+    /// SendScalarSingle) or inspect its raw Features list. Returns an empty sequence if
+    /// VibeManager has not finished initializing.
+    /// </summary>
+    public static IEnumerable<ButtplugDevice> GetDevices()
+    {
+        PlugManager manager;
+        try { manager = VibeManager.Instance?.plug; }
+        catch { return Enumerable.Empty<ButtplugDevice>(); }
+        if (manager == null) return Enumerable.Empty<ButtplugDevice>();
+        return manager.GetDevices().ToArray();
+    }
+
+    /// <summary>
     /// Enumerates the actuator indices the named device exposes for a given feature type. Returns
     /// an empty list if the device is not currently connected or does not advertise the feature.
     /// Single-motor devices return [0]; multi-motor devices like the Lovense Edge 2 return
