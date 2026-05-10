@@ -25,6 +25,25 @@ public class VibeManager
 
     public event Action? PlugReconnectEstablished;
 
+    /// <summary>
+    /// Fires before each VibeSource activation lands. Subscribers can transform the activation
+    /// or return false to swallow it entirely. Exceptions in subscribers are caught and logged.
+    /// Intended as the addon-facing hook for filter / route / replace.
+    /// </summary>
+    public static event Func<VibeActivation, bool>? SourceActivating;
+
+    internal static bool RaiseSourceActivating(in VibeActivation a)
+    {
+        if (SourceActivating == null) return true;
+        var log = BepInEx.Logging.Logger.CreateLogSource("ButtplugSong.Hooks");
+        foreach (Func<VibeActivation, bool> handler in SourceActivating.GetInvocationList())
+        {
+            try { if (!handler(a)) return false; }
+            catch (Exception ex) { log.LogWarning($"SourceActivating subscriber threw: {ex.Message}"); }
+        }
+        return true;
+    }
+
     internal GUIManager UI;
     internal VibeLogic Logic;
     internal PlugManager plug;

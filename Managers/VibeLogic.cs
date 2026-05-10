@@ -248,6 +248,22 @@ internal class VibeLogic
     {
         if (!Armed) return;
 
+        // Addon hook: subscribers can rewrite the activation or swallow it entirely.
+        var activation = new VibeActivation
+        {
+            Identifier = identifier,
+            Power = power, PowerMode = powerMode,
+            Time = time, TimeMode = timeMode,
+            PunctuateTime = punctuateTime,
+            BasePower = basePower, BaseTime = baseTime,
+        };
+        if (!VibeManager.RaiseSourceActivating(in activation)) return;
+        identifier = activation.Identifier;
+        power = activation.Power; powerMode = activation.PowerMode;
+        time = activation.Time; timeMode = activation.TimeMode;
+        punctuateTime = activation.PunctuateTime;
+        basePower = activation.BasePower; baseTime = activation.BaseTime;
+
         //record initial values, and initial changes, for logging purposes
         float powerBefore = TargetPower;
         float timeBefore = Time;
