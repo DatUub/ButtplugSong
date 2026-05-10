@@ -37,22 +37,24 @@ public class PlugManager
     public static event Action<float, bool>? UpdateDevicePower;
 
     /// <summary>
-    /// Fires for each per-feature power dispatch on each connected device. Subscribers receive
-    /// the device name, feature type, and the original computed power, and return the (possibly
-    /// transformed) power that will actually be sent. Subscribers are chained: each one's output
-    /// feeds the next. Exceptions are caught and skip that subscriber. Lets addons remap, scale,
-    /// or zero the per-feature output without forking the dispatch path.
+    /// Fires for each per-actuator power dispatch on each connected device. Subscribers receive
+    /// the device name, feature type, the actuator index within that feature (0 for single-motor
+    /// devices, 0/1/... for multi-motor devices like the Lovense Edge 2), and the original
+    /// computed power, and return the (possibly transformed) power that will actually be sent.
+    /// Subscribers are chained: each one's output feeds the next. Exceptions are caught and skip
+    /// that subscriber. Subscribers that do not care about per-motor addressing can ignore the
+    /// actuator index argument.
     /// </summary>
-    public static event Func<string, FeatureType, float, float>? DevicePowerComputing;
+    public static event Func<string, FeatureType, int, float, float>? DevicePowerComputing;
 
-    internal static float RaiseDevicePowerComputing(string device, FeatureType feature, float originalPower)
+    internal static float RaiseDevicePowerComputing(string device, FeatureType feature, int actuatorIndex, float originalPower)
     {
         if (DevicePowerComputing == null) return originalPower;
         var log = BepInEx.Logging.Logger.CreateLogSource("ButtplugSong.Hooks");
         float current = originalPower;
-        foreach (Func<string, FeatureType, float, float> handler in DevicePowerComputing.GetInvocationList())
+        foreach (Func<string, FeatureType, int, float, float> handler in DevicePowerComputing.GetInvocationList())
         {
-            try { current = handler(device, feature, current); }
+            try { current = handler(device, feature, actuatorIndex, current); }
             catch (Exception ex) { log.LogWarning($"DevicePowerComputing subscriber threw: {ex.Message}"); }
         }
         return current;

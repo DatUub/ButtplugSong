@@ -1,5 +1,7 @@
 using ButtplugSong.GUI;
 using ButtplugSong.GUI.CustomUI;
+using ButtplugSong.Network;
+using GoodVibes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +71,39 @@ public static class AddonAPI
             display.PushRecordStep(SampleWave(wave, intensity, t));
         }
         return display;
+    }
+
+    /// <summary>
+    /// Enumerates the actuator indices the named device exposes for a given feature type. Returns
+    /// an empty list if the device is not currently connected or does not advertise the feature.
+    /// Single-motor devices return [0]; multi-motor devices like the Lovense Edge 2 return
+    /// [0, 1] for Vibrate (base = 0, tip = 1). The same indices are accepted by the per-actuator
+    /// DevicePowerComputing event so addons can build per-motor GUIs.
+    /// </summary>
+    public static IReadOnlyList<int> GetActuatorIndices(string deviceName, FeatureType feature)
+    {
+        string actuatorType = feature switch
+        {
+            FeatureType.Vibrate => "Vibrate",
+            FeatureType.Rotate => "Rotate",
+            FeatureType.Oscillate => "Oscillate",
+            FeatureType.Constrict => "Constrict",
+            FeatureType.Spray => "Spray",
+            FeatureType.Position => "Position",
+            _ => null,
+        };
+        if (actuatorType == null) return Array.Empty<int>();
+        PlugManager manager;
+        try { manager = VibeManager.Instance?.plug; }
+        catch { return Array.Empty<int>(); }
+        if (manager == null) return Array.Empty<int>();
+        var device = manager.GetDevices().FirstOrDefault(d => d.Name == deviceName);
+        if (device == null) return Array.Empty<int>();
+        return device.Features
+            .Where(f => f.ActuatorType == actuatorType)
+            .Select(f => f.ActuatorIndex)
+            .OrderBy(i => i)
+            .ToArray();
     }
 
     private static float SampleWave(string wave, float intensity, float t) => wave switch

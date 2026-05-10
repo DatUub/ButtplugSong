@@ -34,6 +34,19 @@ public class ButtplugDevice
         _client.SendScalarAll(Index, speed, actuators);
     }
 
+    /// <summary>
+    /// Per-actuator vibrate send. Targets a single actuator index on multi-motor devices
+    /// (e.g. Lovense Edge 2 base=0, tip=1). Falls back silently if no vibrate actuator
+    /// matches the requested index.
+    /// </summary>
+    public void SendVibrateCmd(int actuatorIndex, double speed)
+    {
+        bool exists = Features.Any(f =>
+            f.CommandType == "ScalarCmd" && f.ActuatorType == "Vibrate" && f.ActuatorIndex == actuatorIndex);
+        if (!exists) return;
+        _client.SendScalar(Index, speed, "Vibrate", actuatorIndex);
+    }
+
     public void SendRotateCmd(double speed, bool clockwise, int actuatorIndex = 0)
     {
         _client.SendRotate(Index, speed, clockwise, actuatorIndex);

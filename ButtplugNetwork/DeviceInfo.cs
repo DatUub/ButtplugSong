@@ -1,6 +1,7 @@
 using ButtplugSong.Helper;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ButtplugSong.Network;
@@ -68,6 +69,38 @@ public class DeviceInfo
         };
     }
 
+    private static string FeatureTypeToActuatorType(FeatureType type)
+    {
+        return type switch
+        {
+            FeatureType.Vibrate => "Vibrate",
+            FeatureType.Rotate => "Rotate",
+            FeatureType.Oscillate => "Oscillate",
+            FeatureType.Constrict => "Constrict",
+            FeatureType.Spray => "Spray",
+            FeatureType.Position => "Position",
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Returns the actuator indices this device exposes for the given feature type. A single-motor
+    /// device with one vibrate actuator returns [0]; a Lovense Edge 2 returns [0, 1] for Vibrate.
+    /// Devices that do not expose the feature return an empty list. Indices come straight from the
+    /// raw protocol descriptors and match the Buttplug v3 ScalarCmd / RotateCmd / LinearCmd Index
+    /// field, so addons can target a specific motor.
+    /// </summary>
+    public IReadOnlyList<int> GetActuatorIndices(FeatureType feature)
+    {
+        string actuatorType = FeatureTypeToActuatorType(feature);
+        if (actuatorType == null) return Array.Empty<int>();
+        return Device.Features
+            .Where(f => f.ActuatorType == actuatorType)
+            .Select(f => f.ActuatorIndex)
+            .OrderBy(i => i)
+            .ToArray();
+    }
+
     public async Task<bool> TryRefreshBattery()
     {
         try
@@ -113,24 +146,62 @@ public class DeviceInfo
             if (!Features.TryGetValue(featureType, out DeviceFeature feature)) continue;
             if (!feature.IsSupported || !feature.IsEnabled) continue;
 
-            // Addon hook: lets subscribers transform per-feature power before send.
-            float p = PlugManager.RaiseDevicePowerComputing(Device.Name, feature.Type, power);
-
-            switch (feature.Type)
+            var indices = GetActuatorIndices(featureType);
+            if (indices.Count == 0)
             {
-                case FeatureType.Vibrate:
-                    Device.SendVibrateCmd(p);
-                    break;
-                case FeatureType.Rotate:
-                    if (AlternateRotation) RotateClockwise = !RotateClockwise;
-                    Device.SendRotateCmd(p, RotateClockwise);
-                    break;
-                case FeatureType.Position:
-                    uint durationMs = (uint)(MoveDuration * 1000f);
-                    Device.SendLinearCmd(durationMs, p);
-                    break;
-                    //other features not implemented yet - see DeviceFeature.Implemented
+                // Feature is advertised but the raw protocol layer has no actuator entries.
+                // Fall back to a single broadcast at index 0 so the legacy single-arg path still
+                // runs for hand-rolled tests that bypass the protocol parser.
+                float p = PlugManager.RaiseDevicePowerComputing(Device.Name, feature.Type, 0, power);
+                DispatchSingle(feature.Type, p, broadcast: true);
+                continue;
             }
+
+            // Per-actuator dispatch: fires DevicePowerComputing once per (device, feature, index)
+            // so addons can route base vs tip on multi-motor devices like the Lovense Edge 2.
+            bool advanceRotation = AlternateRotation;
+            foreach (int actuatorIndex in indices)
+            {
+                float p = PlugManager.RaiseDevicePowerComputing(Device.Name, feature.Type, actuatorIndex, power);
+
+                switch (feature.Type)
+                {
+                    case FeatureType.Vibrate:
+                        Device.SendVibrateCmd(actuatorIndex, p);
+                        break;
+                    case FeatureType.Rotate:
+                        if (advanceRotation)
+                        {
+                            RotateClockwise = !RotateClockwise;
+                            advanceRotation = false;
+                        }
+                        Device.SendRotateCmd(p, RotateClockwise, actuatorIndex);
+                        break;
+                    case FeatureType.Position:
+                        uint durationMs = (uint)(MoveDuration * 1000f);
+                        Device.SendLinearCmd(durationMs, p, actuatorIndex);
+                        break;
+                        //other features not implemented yet - see DeviceFeature.Implemented
+                }
+            }
+        }
+    }
+
+    private void DispatchSingle(FeatureType type, float p, bool broadcast)
+    {
+        switch (type)
+        {
+            case FeatureType.Vibrate:
+                Device.SendVibrateCmd(p);
+                break;
+            case FeatureType.Rotate:
+                if (AlternateRotation) RotateClockwise = !RotateClockwise;
+                Device.SendRotateCmd(p, RotateClockwise);
+                break;
+            case FeatureType.Position:
+                uint durationMs = (uint)(MoveDuration * 1000f);
+                Device.SendLinearCmd(durationMs, p);
+                break;
         }
     }
 
